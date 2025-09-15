@@ -1,0 +1,12 @@
+streamlit>=1.28.0
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+ta>=0.10.2
+groq>=0.4.0
+plotly>=5.15.0
+yfinance>=0.2.18
+requests>=2.31.0
+python-dotenv>=1.0.0
+scipy>=1.10.0
+
