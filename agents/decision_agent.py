@@ -20,7 +20,7 @@ class DecisionAgent(BaseAgent):
     Output: Structured trading decision (LONG/SHORT) with justification
     """
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "llama3-8b-8192"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "moonshotai/kimi-k2-instruct-0905"):
         super().__init__("DecisionAgent")
         
         # Initialize Groq client
