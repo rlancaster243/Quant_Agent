@@ -20,7 +20,7 @@ class DecisionAgent(BaseAgent):
     Output: Structured trading decision (LONG/SHORT) with justification
     """
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "llama3-8b-8192"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "moonshotai/kimi-k2-instruct-0905"):
         super().__init__("DecisionAgent")
         
         # Initialize Groq client
@@ -152,12 +152,24 @@ Ensure the JSON is valid and complete."""
             
         except Exception as e:
             # Fallback response in case of API error
+            error_message = str(e)
+            key_factors = ["API_ERROR"]
+
+            if "model_decommissioned" in error_message or "decommissioned" in error_message:
+                error_message = (
+                    "LLM API error: The selected model is no longer available. "
+                    "Update your configuration to use 'moonshotai/kimi-k2-instruct-0905'."
+                )
+                key_factors.append("MODEL_DECOMMISSIONED")
+            else:
+                error_message = f"LLM API error: {error_message}"
+
             return json.dumps({
                 "decision": "HOLD",
                 "confidence": 0.0,
-                "justification": f"LLM API error: {str(e)}",
+                "justification": error_message,
                 "risk_level": "HIGH",
-                "key_factors": ["API_ERROR"],
+                "key_factors": key_factors,
                 "stop_loss_suggestion": 0,
                 "take_profit_suggestion": 0
             })

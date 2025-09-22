@@ -54,6 +54,8 @@ The QuantAgent system is designed with a modular, multi-agent architecture that 
    ```bash
    pip install -r requirements.txt
    ```
+   This project now explicitly depends on **Seaborn** (version 0.12 or newer) for enhanced statistical charting, so ensure your
+   environment can install the package successfully.
 
 3. **Set up your API keys:**
    - Rename the `.env.example` file to `.env`.
