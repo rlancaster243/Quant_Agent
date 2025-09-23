@@ -1,9 +1,18 @@
-"""
-Configuration Management for QuantAgent
-"""
+"""Configuration Management for QuantAgent."""
 import os
+import warnings
 from typing import Dict, Any, Optional
+
 from dotenv import load_dotenv
+
+
+DEFAULT_GROQ_MODEL = "moonshotai/kimi-k2-instruct-0905"
+
+# Map of deprecated or decommissioned Groq models to their replacements.
+DECOMMISSIONED_GROQ_MODELS = {
+    "llama3-8b-8192": DEFAULT_GROQ_MODEL,
+    "llama3-70b-8192": DEFAULT_GROQ_MODEL,
+}
 
 
 class Config:
@@ -28,6 +37,8 @@ class Config:
     
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from environment variables."""
+        llm_model = self._resolve_llm_model(os.getenv('LLM_MODEL', DEFAULT_GROQ_MODEL))
+
         return {
             # API Keys
             'groq_api_key': os.getenv('GROQ_API_KEY'),
@@ -45,7 +56,7 @@ class Config:
             'chart_dpi': int(os.getenv('CHART_DPI', '300')),
             
             # LLM Settings
-            'llm_model': os.getenv('LLM_MODEL', 'moonshotai/kimi-k2-instruct-0905'),
+            'llm_model': llm_model,
             'llm_temperature': float(os.getenv('LLM_TEMPERATURE', '0.1')),
             'llm_max_tokens': int(os.getenv('LLM_MAX_TOKENS', '1000')),
             
@@ -71,7 +82,7 @@ class Config:
             Configuration value
         """
         return self._config.get(key, default)
-    
+
     def set(self, key: str, value: Any) -> None:
         """
         Set configuration value.
@@ -137,6 +148,28 @@ class Config:
             'cache_duration': self.get('data_cache_duration'),
             'openbb_pat': self.get('openbb_pat')
         }
+
+    def _resolve_llm_model(self, configured_model: Optional[str]) -> str:
+        """Normalize configured Groq model names and replace deprecated ones."""
+
+        if not configured_model:
+            return DEFAULT_GROQ_MODEL
+
+        model = configured_model.strip()
+        normalized_key = model.lower()
+
+        if normalized_key in DECOMMISSIONED_GROQ_MODELS:
+            replacement = DECOMMISSIONED_GROQ_MODELS[normalized_key]
+            warnings.warn(
+                (
+                    f"Groq model '{model}' has been decommissioned. "
+                    f"Using '{replacement}' instead."
+                ),
+                stacklevel=2,
+            )
+            return replacement
+
+        return model
     
     def __str__(self) -> str:
         """String representation of configuration (without sensitive data)."""

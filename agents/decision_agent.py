@@ -1,10 +1,12 @@
-"""
-DecisionAgent - Final Trading Decision Synthesis using Groq LLM
-"""
+"""DecisionAgent - Final Trading Decision Synthesis using Groq LLM."""
 import json
 import os
+import warnings
 from typing import Dict, Any, Optional
+
 from groq import Groq
+
+from utils.config import DEFAULT_GROQ_MODEL, DECOMMISSIONED_GROQ_MODELS
 from .base_agent import BaseAgent
 
 
@@ -20,16 +22,38 @@ class DecisionAgent(BaseAgent):
     Output: Structured trading decision (LONG/SHORT) with justification
     """
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "moonshotai/kimi-k2-instruct-0905"):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = DEFAULT_GROQ_MODEL):
         super().__init__("DecisionAgent")
-        
+
         # Initialize Groq client
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
             raise ValueError("Groq API key is required. Set GROQ_API_KEY environment variable.")
-        
+
         self.client = Groq(api_key=self.api_key)
-        self.model = model
+        self.model = self._resolve_model_name(model)
+
+    def _resolve_model_name(self, model: Optional[str]) -> str:
+        """Normalize Groq model selection and swap deprecated models automatically."""
+
+        if not model:
+            return DEFAULT_GROQ_MODEL
+
+        resolved_model = model.strip()
+        normalized_key = resolved_model.lower()
+
+        if normalized_key in DECOMMISSIONED_GROQ_MODELS:
+            replacement = DECOMMISSIONED_GROQ_MODELS[normalized_key]
+            warnings.warn(
+                (
+                    f"Groq model '{resolved_model}' has been decommissioned. "
+                    f"Using '{replacement}' instead."
+                ),
+                stacklevel=2,
+            )
+            return replacement
+
+        return resolved_model
         
     def analyze(self, indicator_analysis: Dict[str, Any], 
                 pattern_analysis: Dict[str, Any], 
@@ -155,7 +179,8 @@ Ensure the JSON is valid and complete."""
             error_message = str(e)
             key_factors = ["API_ERROR"]
 
-            if "model_decommissioned" in error_message or "decommissioned" in error_message:
+            error_message_lower = error_message.lower()
+            if "model_decommissioned" in error_message_lower or "decommissioned" in error_message_lower:
                 error_message = (
                     "LLM API error: The selected model is no longer available. "
                     "Update your configuration to use 'moonshotai/kimi-k2-instruct-0905'."

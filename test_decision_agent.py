@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from agents.decision_agent import DecisionAgent
+from utils.config import DEFAULT_GROQ_MODEL
 
 
 def create_mock_groq_response():
@@ -171,6 +172,18 @@ def test_decision_agent_json_parsing():
         except Exception as e:
             print(f"✗ JSON parsing test failed: {str(e)}")
             return False
+
+
+def test_decision_agent_remaps_decommissioned_model():
+    """Ensure decommissioned models are automatically remapped."""
+
+    with patch('groq.Groq') as mock_groq_class:
+        mock_client = Mock()
+        mock_client.chat.completions.create.return_value = create_mock_groq_response()
+        mock_groq_class.return_value = mock_client
+
+        agent = DecisionAgent(api_key="mock_api_key", model="llama3-8b-8192")
+        assert agent.model == DEFAULT_GROQ_MODEL
 
 
 def main():
