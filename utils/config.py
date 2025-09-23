@@ -45,7 +45,7 @@ class Config:
             'chart_dpi': int(os.getenv('CHART_DPI', '300')),
             
             # LLM Settings
-            'llm_model': os.getenv('LLM_MODEL', 'llama3-8b-8192'),
+            'llm_model': os.getenv('LLM_MODEL', 'moonshotai/kimi-k2-instruct-0905'),
             'llm_temperature': float(os.getenv('LLM_TEMPERATURE', '0.1')),
             'llm_max_tokens': int(os.getenv('LLM_MAX_TOKENS', '1000')),
             
