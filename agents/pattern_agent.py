@@ -260,15 +260,15 @@ class PatternAgent(BaseAgent):
     def _generate_pattern_description(self, data: pd.DataFrame, patterns: Dict, 
                                     support_resistance: Dict) -> str:
         """Generate a textual description of the chart patterns."""
-        description = f"Chart Pattern Analysis:\\n"
-        description += f"- Overall Trend: {patterns['trend']}\\n"
-        description += f"- Volatility: {patterns['volatility']:.2f}%\\n"
-        description += f"- Recent Price Action: {patterns['price_action']['pattern']}\\n"
+        description = f"Chart Pattern Analysis:\n"
+        description += f"- Overall Trend: {patterns['trend']}\n"
+        description += f"- Volatility: {patterns['volatility']:.2f}%\n"
+        description += f"- Recent Price Action: {patterns['price_action']['pattern']}\n"
         
         if support_resistance['support']:
-            description += f"- Support Level: {support_resistance['support']:.2f}\\n"
+            description += f"- Support Level: {support_resistance['support']:.2f}\n"
         if support_resistance['resistance']:
-            description += f"- Resistance Level: {support_resistance['resistance']:.2f}\\n"
+            description += f"- Resistance Level: {support_resistance['resistance']:.2f}\n"
         
         current_price = data['Close'].iloc[-1]
         if support_resistance['support'] and support_resistance['resistance']:

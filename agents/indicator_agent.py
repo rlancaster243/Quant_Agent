@@ -144,12 +144,12 @@ class IndicatorAgent(BaseAgent):
         bearish_count = sum(1 for signal in signals.values() if signal == 'Bearish')
         neutral_count = sum(1 for signal in signals.values() if signal == 'Neutral')
         
-        summary = f"Technical Analysis Summary:\\n"
-        summary += f"- RSI ({indicators['rsi']:.2f}): {signals['rsi']}\\n"
-        summary += f"- MACD ({indicators['macd_line']:.4f}): {signals['macd']}\\n"
-        summary += f"- Rate of Change ({indicators['roc']:.2f}%): {signals['roc']}\\n"
-        summary += f"- Stochastic ({indicators['stoch_k']:.2f}): {signals['stoch']}\\n"
-        summary += f"- Williams %R ({indicators['willr']:.2f}): {signals['willr']}\\n\\n"
+        summary = f"Technical Analysis Summary:\n"
+        summary += f"- RSI ({indicators['rsi']:.2f}): {signals['rsi']}\n"
+        summary += f"- MACD ({indicators['macd_line']:.4f}): {signals['macd']}\n"
+        summary += f"- Rate of Change ({indicators['roc']:.2f}%): {signals['roc']}\n"
+        summary += f"- Stochastic ({indicators['stoch_k']:.2f}): {signals['stoch']}\n"
+        summary += f"- Williams %R ({indicators['willr']:.2f}): {signals['willr']}\n\n"
         summary += f"Signal Distribution: {bullish_count} Bullish, {bearish_count} Bearish, {neutral_count} Neutral"
         
         return summary
