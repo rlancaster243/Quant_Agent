@@ -45,7 +45,8 @@ class Config:
             'chart_dpi': int(os.getenv('CHART_DPI', '300')),
             
             # LLM Settings
-            'llm_model': os.getenv('LLM_MODEL', 'llama3-8b-8192'),
+            # None -> DecisionAgent.DEFAULT_MODEL (single source of truth for the default model)
+            'llm_model': os.getenv('LLM_MODEL') or None,
             'llm_temperature': float(os.getenv('LLM_TEMPERATURE', '0.1')),
             'llm_max_tokens': int(os.getenv('LLM_MAX_TOKENS', '1000')),
             
@@ -101,8 +102,9 @@ class Config:
         Returns:
             List of missing API key names
         """
+        # Only the Groq key is required; OpenBB is an optional data source (yfinance is the default).
         validation = self.validate_api_keys()
-        return [key for key, valid in validation.items() if not valid]
+        return [key for key, valid in validation.items() if not valid and key == 'groq_api_key']
     
     def is_configured(self) -> bool:
         """
@@ -140,7 +142,8 @@ class Config:
     
     def __str__(self) -> str:
         """String representation of configuration (without sensitive data)."""
-        safe_config = {k: v for k, v in self._config.items() 
-                      if 'key' not in k.lower() and 'token' not in k.lower()}
+        sensitive = ('key', 'token', 'pat', 'secret', 'password')
+        safe_config = {k: v for k, v in self._config.items()
+                       if not any(s in k.lower() for s in sensitive)}
         return f"Config({safe_config})"
 

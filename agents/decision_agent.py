@@ -3,9 +3,20 @@ DecisionAgent - Final Trading Decision Synthesis using Groq LLM
 """
 import json
 import os
+import re
 from typing import Dict, Any, Optional
 from groq import Groq
 from .base_agent import BaseAgent
+
+DEFAULT_MODEL = "moonshotai/kimi-k2-instruct-0905"
+
+
+def _to_float(value: Any, default: float = 0.0) -> float:
+    """Coerce LLM-provided numbers (which may arrive as strings or null) to float."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 class DecisionAgent(BaseAgent):
@@ -20,7 +31,7 @@ class DecisionAgent(BaseAgent):
     Output: Structured trading decision (LONG/SHORT) with justification
     """
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "moonshotai/kimi-k2-instruct-0905"):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         super().__init__("DecisionAgent")
         
         # Initialize Groq client
@@ -29,7 +40,7 @@ class DecisionAgent(BaseAgent):
             raise ValueError("Groq API key is required. Set GROQ_API_KEY environment variable.")
         
         self.client = Groq(api_key=self.api_key)
-        self.model = model
+        self.model = model or DEFAULT_MODEL
         
     def analyze(self, indicator_analysis: Dict[str, Any], 
                 pattern_analysis: Dict[str, Any], 
@@ -165,16 +176,14 @@ Ensure the JSON is valid and complete."""
     def _parse_llm_response(self, response: str) -> Dict[str, Any]:
         """Parse and validate the LLM response."""
         try:
-            # Clean the response (remove any markdown formatting)
-            cleaned_response = response.strip()
-            if cleaned_response.startswith("```json"):
-                cleaned_response = cleaned_response[7:]
-            if cleaned_response.endswith("```"):
-                cleaned_response = cleaned_response[:-3]
-            cleaned_response = cleaned_response.strip()
-            
-            # Parse JSON
-            decision_data = json.loads(cleaned_response)
+            # Models often wrap JSON in markdown fences or add prose around it;
+            # extract the outermost {...} block instead of assuming a clean payload.
+            match = re.search(r"\{.*\}", response or "", re.DOTALL)
+            if not match:
+                raise ValueError("No JSON object found in response")
+            decision_data = json.loads(match.group(0))
+            if not isinstance(decision_data, dict):
+                raise ValueError("Response JSON is not an object")
             
             # Validate required fields
             required_fields = ["decision", "confidence", "justification", "risk_level"]
@@ -182,31 +191,26 @@ Ensure the JSON is valid and complete."""
                 if field not in decision_data:
                     raise ValueError(f"Missing required field: {field}")
             
-            # Validate decision values
-            valid_decisions = ["LONG", "SHORT", "HOLD"]
-            if decision_data["decision"] not in valid_decisions:
-                decision_data["decision"] = "HOLD"
+            # Validate decision values (case-insensitive)
+            decision = str(decision_data["decision"]).strip().upper()
+            decision_data["decision"] = decision if decision in ("LONG", "SHORT", "HOLD") else "HOLD"
             
             # Validate confidence range
-            confidence = float(decision_data["confidence"])
-            decision_data["confidence"] = max(0.0, min(1.0, confidence))
+            decision_data["confidence"] = max(0.0, min(1.0, _to_float(decision_data["confidence"])))
             
             # Validate risk level
-            valid_risk_levels = ["LOW", "MEDIUM", "HIGH"]
-            if decision_data["risk_level"] not in valid_risk_levels:
-                decision_data["risk_level"] = "MEDIUM"
+            risk = str(decision_data["risk_level"]).strip().upper()
+            decision_data["risk_level"] = risk if risk in ("LOW", "MEDIUM", "HIGH") else "MEDIUM"
             
-            # Ensure optional fields exist
-            if "key_factors" not in decision_data:
-                decision_data["key_factors"] = []
-            if "stop_loss_suggestion" not in decision_data:
-                decision_data["stop_loss_suggestion"] = 0
-            if "take_profit_suggestion" not in decision_data:
-                decision_data["take_profit_suggestion"] = 0
+            # Normalize optional fields
+            factors = decision_data.get("key_factors") or []
+            decision_data["key_factors"] = [str(f) for f in factors] if isinstance(factors, list) else [str(factors)]
+            decision_data["stop_loss_suggestion"] = _to_float(decision_data.get("stop_loss_suggestion"))
+            decision_data["take_profit_suggestion"] = _to_float(decision_data.get("take_profit_suggestion"))
             
             return decision_data
             
-        except (json.JSONDecodeError, ValueError, KeyError) as e:
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError) as e:
             # Return safe fallback decision
             return {
                 "decision": "HOLD",
@@ -224,16 +228,16 @@ Ensure the JSON is valid and complete."""
             return "No decision made yet."
         
         decision = self.last_analysis
-        summary = f"Trading Decision: {decision['decision']}\\n"
-        summary += f"Confidence: {decision['confidence']:.1%}\\n"
-        summary += f"Risk Level: {decision['risk_level']}\\n"
-        summary += f"Justification: {decision['justification']}\\n"
+        summary = f"Trading Decision: {decision['decision']}\n"
+        summary += f"Confidence: {decision['confidence']:.1%}\n"
+        summary += f"Risk Level: {decision['risk_level']}\n"
+        summary += f"Justification: {decision['justification']}\n"
         
         if decision['key_factors']:
-            summary += f"Key Factors: {', '.join(decision['key_factors'])}\\n"
+            summary += f"Key Factors: {', '.join(decision['key_factors'])}\n"
         
         if decision['stop_loss_suggestion'] > 0:
-            summary += f"Suggested Stop Loss: {decision['stop_loss_suggestion']:.2f}\\n"
+            summary += f"Suggested Stop Loss: {decision['stop_loss_suggestion']:.2f}\n"
         
         if decision['take_profit_suggestion'] > 0:
             summary += f"Suggested Take Profit: {decision['take_profit_suggestion']:.2f}"

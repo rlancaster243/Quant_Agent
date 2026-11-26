@@ -1,122 +1,121 @@
-# QuantAgent - AI-Powered Trading Analysis Assistant
+# QuantAgent — Multi-Agent LLM Trading Analysis
 
-QuantAgent is a multi-agent large language model (LLM) framework designed for high-frequency trading analysis. The framework was introduced in the research paper QuantAgent: Price-Driven Multi-Agent LLMs for High-Frequency Trading by Fei Xiong (Stony Brook University, Carnegie Mellon University), Xiang Zhang (University of British Columbia), Aosong Feng (Yale University), Siqi Sun (Fudan University), and Chenyu You (Stony Brook University).
+An implementation of the architecture in *QuantAgent: Price-Driven Multi-Agent LLMs for High-Frequency Trading* (Xiong, Zhang, Feng, Sun, You). Three deterministic analysis agents (indicators, chart patterns, trends) feed a Groq-hosted LLM that synthesizes a structured LONG / SHORT / HOLD decision, served through a Streamlit UI.
 
-This project implements the core concepts of QuantAgent using a modern Python stack, providing a comprehensive and interactive tool for financial market analysis.
+> **Scope note.** The paper targets high-frequency (intraday) trading. This project runs on daily bars from Yahoo Finance by default, and it implements the paper's *architecture*, not its experimental results. See [Evaluation](#evaluation) and [Limitations](#limitations).
 
-This application leverages a modular, agent-based architecture to analyze market data from various perspectives, including technical indicators, chart patterns, and trend analysis. The insights from these specialized agents are then synthesized by a decision agent, powered by a large language model (LLM), to provide a final trading recommendation.
+## Architecture
 
+```
+                 ┌──────────────┐
+   yfinance ───► │ DataFetcher  │  (OpenBB used only if the optional SDK is installed)
+                 └──────┬───────┘
+         ┌──────────────┼───────────────┐
+         ▼              ▼               ▼
+ IndicatorAgent    PatternAgent     TrendAgent        deterministic (pandas / ta / scipy)
+ RSI, MACD, ROC,   candlestick      multi-horizon
+ Stoch, Williams%R chart, S/R       regression + momentum
+         └──────────────┼───────────────┘
+                        ▼
+                 DecisionAgent  ──►  Groq LLM (default: moonshotai/kimi-k2-instruct-0905)
+                        │            strict-JSON prompt, validated + clamped,
+                        ▼            falls back to HOLD on API/parse errors
+              LONG / SHORT / HOLD + confidence, risk, stop/target
+```
 
+| Component | File |
+|---|---|
+| Orchestrator | `quant_agent_orchestrator.py` |
+| Agents | `agents/{indicator,pattern,trend,decision}_agent.py` |
+| Data, config, charts | `utils/` |
+| Walk-forward evaluation | `evaluation/backtest.py` |
+| Tests (offline, mocked LLM) | `tests/` |
+| UI | `streamlit_app.py` |
 
+## Getting started
 
-## Key Features
-
-- **Multi-Agent Architecture:** The system is composed of specialized agents, each responsible for a specific analytical task:
-    - **IndicatorAgent:** Calculates and interprets a wide range of technical indicators.
-    - **PatternAgent:** Generates advanced candlestick charts and identifies visual patterns.
-    - **TrendAgent:** Analyzes market trends across multiple timeframes.
-    - **DecisionAgent:** Utilizes the Groq LLM to synthesize agent analyses and provide trading recommendations.
-- **Interactive Web Interface:** A user-friendly Streamlit application for easy interaction and visualization of analysis results.
-- **Flexible Data Acquisition:** Fetches market data using the OpenBB SDK with yfinance as a fallback, ensuring data availability.
-- **Comprehensive Analysis:** Provides a holistic view of the market by combining technical, pattern, and trend analysis.
-- **AI-Powered Decisions:** Leverages the speed and power of the Groq LLM for near real-time decision-making.
-- **Extensible and Modular:** The agent-based design allows for easy extension and customization.
-
-
-
-
-## System Architecture
-
-The QuantAgent system is designed with a modular, multi-agent architecture that separates concerns and allows for specialized analysis. The orchestrator coordinates the workflow, from data fetching to the final AI-powered decision.
-
-
-<img width="773" height="1546" alt="pako_eNp1kl1vmzAUhv-K5YuJSiRLAwkNlSYloUlpwtqp7c0gFx6cBGtgmDHTMsR_n3EgkqWOK57D-yGb0-C4SAC7-MRJmaI3L2JIPsvwvQKOfFbWwkWv5_xHkZnoBTgtElOOBfDfJDug0egLWhnfasLE8gRMoGcep1AJTkTBb-4vYSslWzceEQRtQEgFRyP0XAJbrT6fj5QRFkPbq9dK7" src="https://github.com/user-attachments/assets/6cd2e6c8-dcfd-4381-8505-789b27898c50" />
-
-
-
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.8 or higher
-- Pip (Python package installer)
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/rlancaster243/quant-agent.git
-   cd quant-agent
-   ```
-
-2. **Install the required packages:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-   This project now explicitly depends on **Seaborn** (version 0.12 or newer) for enhanced statistical charting, so ensure your
-   environment can install the package successfully.
-
-3. **Set up your API keys:**
-   - Rename the `.env.example` file to `.env`.
-   - Add your Groq API key to the `.env` file:
-     ```
-     GROQ_API_KEY="your-groq-api-key"
-     ```
-
-### Usage
-
-To run the Streamlit application, execute the following command in your terminal:
+Requires **Python 3.10–3.12**.
 
 ```bash
+git clone https://github.com/rlancaster243/Quant_Agent.git
+cd Quant_Agent
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env          # then add your GROQ_API_KEY; .env is git-ignored
 streamlit run streamlit_app.py
 ```
 
-This will start the web server and open the application in your default browser. From there, you can enter a stock symbol, select the analysis parameters, and get a comprehensive trading analysis.
+Optional settings (`.env`): `LLM_MODEL` overrides the default Groq model. `OPENBB_PAT` is only used if you install the OpenBB SDK yourself.
 
+Without a Groq key, the three analysis agents still run and the decision defaults to `HOLD`.
 
+## Testing
 
-
-## Project Structure
-
-```
-quant-agent/
-├── agents/
-│   ├── __init__.py
-│   ├── base_agent.py
-│   ├── indicator_agent.py
-│   ├── pattern_agent.py
-│   ├── trend_agent.py
-│   └── decision_agent.py
-├── charts/
-│   └── (generated charts)
-├── data/
-│   └── (cached data)
-├── utils/
-│   ├── __init__.py
-│   ├── config.py
-│   ├── data_fetcher.py
-│   └── chart_enhancer.py
-├── .env
-├── .env.example
-├── requirements.txt
-├── streamlit_app.py
-├── quant_agent_orchestrator.py
-├── test_agents.py
-├── test_decision_agent.py
-├── test_full_system.py
-└── README.md
+```bash
+pip install -r requirements-dev.txt
+pytest
 ```
 
+There are 34 tests, and all of them run offline. Market data is synthetic and the Groq client is mocked, so CI needs no secrets. They cover:
+- the agent output contracts
+- trend detection on synthetic up- and downtrends
+- LLM response parsing: markdown fences, surrounding prose, string-typed numbers, invalid values, API failures
+- the full orchestrator pipeline, with and without the LLM
+- the backtest engine: a no-look-ahead check, non-overlapping steps, and exact metrics on deterministic series
 
+CI runs the suite on every push and PR (`.github/workflows/ci.yml`).
 
+## Evaluation
 
-## Contributing
+`evaluation/backtest.py` runs a **walk-forward** evaluation:
+- At each step, the decider sees only bars up to and including *t*.
+- It holds a position for `horizon` bars, scored on the forward return.
+- Steps don't overlap.
 
-Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue or submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
+It reports these metrics:
+- hit rate, with a binomial p-value against 50%
+- total return compared with buy-and-hold
+- annualized Sharpe ratio
+- max drawdown
+- coverage (the share of steps that are not HOLD)
+
+```bash
+# Rule-based + naive baselines (no API key needed)
+python -m evaluation.backtest --symbols AAPL MSFT SPY --period 5y --horizon 5
+
+# Full LLM pipeline (one Groq call per step; cap steps to bound cost)
+python -m evaluation.backtest --symbols SPY --deciders llm always_long --max-steps 60
+```
+
+### Baseline results
+
+These use daily bars, a 5-day horizon and a 60-bar warm-up, run 2026-11-25. Decision dates run from 2022-02 to 2026-11, with 238 steps per symbol. Full output is in `evaluation/results/`.
+
+| Symbol | Decider | Trades | Hit rate (p) | Strategy return | Buy & hold | Sharpe | Max DD |
+|---|---|---|---|---|---|---|---|
+| AAPL | consensus | 81 | 0.543 (0.51) | −8.3% | +123.2% | −0.04 | −41.0% |
+| AAPL | random | 238 | 0.492 (0.85) | −15.8% | +123.2% | −0.01 | −47.1% |
+| MSFT | consensus | 77 | 0.416 (0.17) | −50.7% | +84.9% | −0.89 | −60.7% |
+| MSFT | random | 238 | 0.492 (0.85) | −26.8% | +84.9% | −0.09 | −49.8% |
+| SPY | consensus | 52 | 0.500 (1.00) | −2.3% | +80.8% | −0.03 | −22.0% |
+| SPY | random | 238 | 0.504 (0.95) | −3.1% | +80.8% | +0.03 | −28.6% |
+
+**Interpretation:**
+- The rule-based consensus of the Indicator and Trend agents has **no statistically significant edge**: every p-value is above 0.17.
+- It underperforms buy-and-hold on all three symbols.
+- One reason is structural, and `tests/test_analysis_agents.py` documents it. The oscillators (RSI, Stochastic, Williams %R) read strong rallies as *overbought* (bearish) while the TrendAgent reads them as bullish. So the two agents disagree, and the consensus HOLDs, exactly when trends are strongest.
+
+**The LLM decider has not been benchmarked yet.** Whether the LLM synthesis adds value over these baselines is the project's open question, and the `llm` decider is in place to measure it.
+
+## Limitations
+
+- **No transaction costs, slippage or borrow costs** are modeled. Short returns are idealized.
+- **Daily bars only.** The paper's high-frequency setting is not reproduced.
+- **Three large-cap symbols over one ~5-year window** is a small sample, and results may not generalize.
+- **The LLM decider is non-deterministic.** Even at temperature 0.1, model changes on Groq can alter results.
+- PatternAgent's "visual" analysis is computed from prices. No vision model reads the chart image.
+- This is an educational project, **not investment advice**.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
-
-
+MIT. See `LICENSE`.

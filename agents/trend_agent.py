@@ -284,24 +284,24 @@ class TrendAgent(BaseAgent):
     def _generate_trend_summary(self, trend_analysis: Dict, momentum_analysis: Dict,
                                trend_strength: Dict, breakout_analysis: Dict) -> str:
         """Generate a comprehensive trend summary."""
-        summary = "Trend Analysis Summary:\\n"
+        summary = "Trend Analysis Summary:\n"
         
         # Trend directions
         summary += f"- Short-term trend: {trend_analysis['short_term']['direction']} "
-        summary += f"({trend_analysis['short_term']['strength']})\\n"
+        summary += f"({trend_analysis['short_term']['strength']})\n"
         summary += f"- Medium-term trend: {trend_analysis['medium_term']['direction']} "
-        summary += f"({trend_analysis['medium_term']['strength']})\\n"
+        summary += f"({trend_analysis['medium_term']['strength']})\n"
         summary += f"- Long-term trend: {trend_analysis['long_term']['direction']} "
-        summary += f"({trend_analysis['long_term']['strength']})\\n"
+        summary += f"({trend_analysis['long_term']['strength']})\n"
         
         # Momentum
-        summary += f"- Price momentum: {momentum_analysis['price_momentum']['overall']}\\n"
-        summary += f"- Volume momentum: {momentum_analysis['volume_momentum']['trend']}\\n"
-        summary += f"- Price acceleration: {momentum_analysis['acceleration']['direction']}\\n"
+        summary += f"- Price momentum: {momentum_analysis['price_momentum']['overall']}\n"
+        summary += f"- Volume momentum: {momentum_analysis['volume_momentum']['trend']}\n"
+        summary += f"- Price acceleration: {momentum_analysis['acceleration']['direction']}\n"
         
         # Trend strength
         summary += f"- Trend strength: {trend_strength['classification']} "
-        summary += f"(Score: {trend_strength['score']:.1f})\\n"
+        summary += f"(Score: {trend_strength['score']:.1f})\n"
         
         # Breakouts
         summary += f"- Breakout status: {breakout_analysis['status']}"
